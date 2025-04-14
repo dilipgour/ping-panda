@@ -1,0 +1,79 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Plan {
+  FREE
+  PRO
+}
+
+enum DeliveryStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+model User {
+  id         String   @id @default(cuid())
+  externalId String?  @unique
+  quotaLimit Int
+  plan       Plan     @default(FREE)
+  email      String   @unique
+  apiKey     String   @unique @default(cuid())
+  discordId  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  EventCategories EventCategory[]
+  events          Event[]
+  quota           quota[]
+
+  @@index([email, apiKey])
+}
+
+model EventCategory {
+  id        String   @id @default(cuid())
+  name      String
+  color     Int
+  emoji     String?
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  events Event[]
+
+  @@unique([userId, name])
+}
+
+model Event {
+  id               String         @id @default(cuid())
+  name             String
+  fields           Json
+  formattedMessage String
+  deliveryStatus   DeliveryStatus @default(PENDING)
+  user             User           @relation(fields: [userId], references: [id])
+  userId           String
+  EventCategory    EventCategory? @relation(fields: [eventCategoryId], references: [id])
+  eventCategoryId  String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@index([createdAt])
+}
+
+model quota {
+  id        String   @id @default(cuid())
+  year      Int
+  month     Int
+  count     Int      @default(0)
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
